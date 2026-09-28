@@ -22,21 +22,27 @@ async function main() {
     data: { nome: "Weslley Santos", email: "paciente@cliquesaude.com", senha: senhaPaciente, tipo: "paciente" },
   });
 
-  console.log("Criando médicos e horários...");
+  console.log("Criando médicos e horários (agenda comercial completa)...");
   const dadosMedicos = [
-    { nome: "Dra. Carla Nunes", crm: "CRM-SP 10234", especialidade: "Cardiologia", valorConsulta: 250, horarios: [["Segunda", "08:00"], ["Segunda", "09:00"], ["Terça", "14:00"]] },
-    { nome: "Dr. Bruno Alves", crm: "CRM-SP 10987", especialidade: "Neurologia", valorConsulta: 280, horarios: [["Segunda", "10:00"], ["Quarta", "15:00"]] },
-    { nome: "Dra. Fernanda Lima", crm: "CRM-SP 11456", especialidade: "Dermatologia", valorConsulta: 220, horarios: [["Terça", "08:00"], ["Quinta", "11:00"]] },
-    { nome: "Dr. Ricardo Souza", crm: "CRM-SP 11890", especialidade: "Pediatria", valorConsulta: 200, horarios: [["Sexta", "09:00"]] },
-    { nome: "Dra. Juliana Prado", crm: "CRM-SP 12345", especialidade: "Ortopedia", valorConsulta: 240, horarios: [["Quarta", "16:00"]] },
-    { nome: "Dr. Marcos Teixeira", crm: "CRM-SP 12987", especialidade: "Cardiologia", valorConsulta: 260, horarios: [["Quinta", "13:00"]] },
+    { nome: "Dra. Carla Nunes", crm: "CRM-SP 10234", especialidade: "Cardiologia", valorConsulta: 250 },
+    { nome: "Dr. Bruno Alves", crm: "CRM-SP 10987", especialidade: "Neurologia", valorConsulta: 280 },
+    { nome: "Dra. Fernanda Lima", crm: "CRM-SP 11456", especialidade: "Dermatologia", valorConsulta: 220 },
+    { nome: "Dr. Ricardo Souza", crm: "CRM-SP 11890", especialidade: "Pediatria", valorConsulta: 200 },
+    { nome: "Dra. Juliana Prado", crm: "CRM-SP 12345", especialidade: "Ortopedia", valorConsulta: 240 },
+    { nome: "Dr. Marcos Teixeira", crm: "CRM-SP 12987", especialidade: "Cardiologia", valorConsulta: 260 },
   ];
 
+  // Todo médico atende em horário comercial, segunda a sexta, com intervalo de almoço (12h-14h).
+  const DIAS_UTEIS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
+  const HORARIO_COMERCIAL = ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00"];
+
   const medicosCriados = [];
-  for (const { horarios, ...dados } of dadosMedicos) {
+  for (const dados of dadosMedicos) {
     const medico = await prisma.medico.create({ data: dados });
-    for (const [diaSemana, horario] of horarios) {
-      await prisma.horarioDisponivel.create({ data: { medicoId: medico.id, diaSemana, horario } });
+    for (const diaSemana of DIAS_UTEIS) {
+      for (const horario of HORARIO_COMERCIAL) {
+        await prisma.horarioDisponivel.create({ data: { medicoId: medico.id, diaSemana, horario } });
+      }
     }
     medicosCriados.push(medico);
   }
