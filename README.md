@@ -32,6 +32,7 @@ por uma API real em vez do mock `json-server`.
 | Autenticação | JWT (`jsonwebtoken`) + hash de senha (`bcryptjs`) |
 | Validação | Zod |
 | Logs de requisição | Morgan |
+| Documentação da API | Swagger/OpenAPI (`swagger-jsdoc` + `swagger-ui-express`) |
 | Testes | Jest + Supertest |
 | CI/CD | GitHub Actions |
 
@@ -49,6 +50,33 @@ npm run dev                 # sobe o servidor em http://localhost:3333
 
 - Paciente: `paciente@cliquesaude.com` / `123456`
 - Admin: `admin@cliquesaude.com` / `admin123`
+
+## Documentação interativa da API (Swagger/OpenAPI)
+
+Com o servidor rodando, a documentação completa e interativa de todos os
+endpoints está em:
+
+```
+http://localhost:3333/api-docs
+```
+
+Ela é gerada a partir de comentários `@openapi` (JSDoc) em cada rota — ver
+`src/config/swagger.js` (definição base: info, servidores, schemas dos
+modelos e das respostas de erro, esquema de segurança JWT) e os blocos de
+comentário em `src/routes/*.js` (um por endpoint). Cada endpoint documenta:
+
+- Descrição da funcionalidade e parâmetros aceitos (path/query/body).
+- Exemplo de requisição e de resposta de sucesso.
+- Todos os códigos de status possíveis (200/201/400/401/403/404/409), com o
+  formato de erro (`ErroResposta`) reaproveitado do middleware centralizado.
+
+Rotas protegidas (cadeado 🔒 na interface) podem ser testadas direto pelo
+Swagger UI: faça login em `POST /auth/login`, copie o `token` da resposta e
+clique em **Authorize** no topo da página, colando `Bearer <token>`.
+
+Essa documentação é o "contrato técnico" entre back-end e front-end citado na
+Atividade 4 de PPE III — qualquer pessoa (mesmo sem acesso ao código) consegue
+entender e testar a API só a partir dessa página.
 
 ## Arquitetura em camadas
 

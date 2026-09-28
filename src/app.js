@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const swaggerUi = require("swagger-ui-express");
+const especificacaoSwagger = require("./config/swagger");
 const routes = require("./routes");
 const notFound = require("./middlewares/notFound.middleware");
 const errorHandler = require("./middlewares/errorHandler.middleware");
@@ -12,6 +14,12 @@ app.use(express.json());
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
+
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(especificacaoSwagger, { customSiteTitle: "Clique Saúde API — Documentação" })
+);
 
 app.use("/api", routes);
 
