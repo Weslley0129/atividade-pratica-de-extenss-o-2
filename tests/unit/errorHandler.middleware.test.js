@@ -1,5 +1,14 @@
 const errorHandler = require("../../src/middlewares/errorHandler.middleware");
 const { ValidationError, NotFoundError } = require("../../src/utils/AppError");
+const { Prisma } = require("@prisma/client");
+
+function criarErroPrisma(code, meta) {
+  return new Prisma.PrismaClientKnownRequestError("erro simulado do prisma", {
+    code,
+    clientVersion: "5.22.0",
+    meta,
+  });
+}
 
 function criarResMock() {
   const res = {};
@@ -27,6 +36,22 @@ describe("errorHandler", () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json.mock.calls[0][0].detalhes).toEqual([{ campo: "email", mensagem: "obrigatório" }]);
+  });
+
+  it("mapeia violação de unicidade do Prisma (P2002) para 409", () => {
+    const res = criarResMock();
+    errorHandler(criarErroPrisma("P2002", { target: ["email"] }), req, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json.mock.calls[0][0].codigo).toBe("ERRO_CONFLITO");
+  });
+
+  it("mapeia registro não encontrado do Prisma (P2025) para 404", () => {
+    const res = criarResMock();
+    errorHandler(criarErroPrisma("P2025"), req, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json.mock.calls[0][0].codigo).toBe("ERRO_NAO_ENCONTRADO");
   });
 
   it("transforma qualquer erro inesperado em 500 sem vazar detalhes internos", () => {
