@@ -9,6 +9,20 @@ Essa API é o próximo passo do roadmap definido na Atividade 1 (ver relatório
 daquela entrega): substitui o `json-server` que o front-end em React usava
 como mock, mantendo exatamente o mesmo contrato de dados.
 
+## Por que essa evolução?
+
+A versão anterior do sistema concentrava tudo num único servidor Flask:
+rotas, regras de negócio e acesso ao banco (SQLite via SQL cru ou ORM leve)
+misturados nos mesmos arquivos, sem separação clara de responsabilidades e
+sem testes automatizados. Esta API em Node.js organiza o backend em camadas
+(`routes → controllers → services → models`), isola o acesso a dados atrás
+do Prisma ORM (facilitando trocar SQLite por PostgreSQL em produção só
+mudando `DATABASE_URL`), centraliza autenticação via JWT e tratamento de
+erros num único middleware, e é validada por uma suíte de testes
+automatizados (Jest + Supertest) com cobertura mínima obrigatória — mantendo
+o mesmo contrato de dados que o front-end em React já consome, agora servido
+por uma API real em vez do mock `json-server`.
+
 ## Tecnologias utilizadas
 
 | Camada | Tecnologia |
