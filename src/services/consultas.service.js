@@ -1,12 +1,7 @@
 const consultaModel = require("../models/consulta.model");
 const medicoModel = require("../models/medico.model");
 const { ValidationError, ConflictError, NotFoundError, ForbiddenError } = require("../utils/AppError");
-
-function ehFimDeSemana(dataISO) {
-  const [ano, mes, dia] = dataISO.split("-").map(Number);
-  const diaSemana = new Date(ano, mes - 1, dia).getDay();
-  return diaSemana === 0 || diaSemana === 6;
-}
+const { ehFimDeSemana } = require("../utils/data");
 
 async function listarDoPaciente(pacienteId) {
   return consultaModel.listarDoPaciente(pacienteId);

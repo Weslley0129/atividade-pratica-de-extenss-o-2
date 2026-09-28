@@ -1,0 +1,85 @@
+name: CI/CD — Clique Saúde API
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Instalar, testar e medir cobertura
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # Instalação das dependências do projeto
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Gerar o Prisma Client
+        run: npx prisma generate
+
+      # Execução da suíte de testes automatizados + verificação de cobertura
+      # (o próprio Jest falha o job se a cobertura ficar abaixo do limite
+      # configurado em jest.config.js — coverageThreshold).
+      - name: Rodar testes com cobertura
+        run: npm run test:coverage
+
+      - name: Publicar relatório de cobertura como artefato
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-backend
+          path: coverage/
+          retention-days: 15
+
+  build:
+    name: Build
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Gerar o Prisma Client
+        run: npx prisma generate
+
+      # "Build" de uma API Node/Express sem bundler: garante que a aplicação
+      # inteira (rotas, middlewares, services) é importada sem erro de sintaxe
+      # ou de wiring antes de considerar a entrega pronta para deploy.
+      - name: Build (carregar a aplicação)
+        run: npm run build
+
+  # Deploy automático para staging — desativado por padrão porque este
+  # projeto de estudo não tem um ambiente de staging real provisionado.
+  # Para habilitar: crie o secret RENDER_DEPLOY_HOOK_URL (ou equivalente do
+  # seu provedor) nas configurações do repositório e mude "if: false" para
+  # "if: github.ref == 'refs/heads/main'".
+  deploy:
+    name: Deploy (staging) — opcional
+    needs: build
+    runs-on: ubuntu-latest
+    if: false
+
+    steps:
+      - name: Disparar deploy no Render
+        run: curl -fsSL "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

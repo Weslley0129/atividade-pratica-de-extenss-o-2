@@ -18,6 +18,8 @@ como mock, mantendo exatamente o mesmo contrato de dados.
 | Autenticação | JWT (`jsonwebtoken`) + hash de senha (`bcryptjs`) |
 | Validação | Zod |
 | Logs de requisição | Morgan |
+| Testes | Jest + Supertest |
+| CI/CD | GitHub Actions |
 
 ## Como rodar
 
@@ -137,3 +139,76 @@ global (`src/middlewares/errorHandler.middleware.js`), que:
 - Autenticação via JWT assinado (`JWT_SECRET` em `.env`, nunca commitado).
 - Middleware `autenticar` protege rotas sensíveis; `exigirAdmin` protege
   ações administrativas (cadastro de médico, exclusão de consulta etc.).
+
+## Testes automatizados (Atividade 3)
+
+```bash
+npm test              # roda toda a suíte (unitários + integração)
+npm run test:coverage # roda a suíte e gera o relatório de cobertura
+```
+
+O comando `test`/`test:coverage` já cuida de tudo sozinho: aplica as
+migrations no banco de teste (`prisma/test.db`, separado do banco de
+desenvolvimento) antes de rodar os testes, via `globalSetup` do Jest.
+
+### Estrutura
+
+```
+tests/
+├── unit/                        → mocka os models, testa services/middlewares isoladamente
+│   ├── data.test.js               (função pura ehFimDeSemana)
+│   ├── auth.service.test.js
+│   ├── consultas.service.test.js
+│   ├── medicos.service.test.js
+│   └── errorHandler.middleware.test.js
+├── integration/                 → Supertest batendo na API real + banco de teste real
+│   ├── auth.routes.test.js
+│   ├── medicos.routes.test.js
+│   └── consultas.routes.test.js
+├── fixtures/dados.js             → objetos de exemplo reaproveitados
+├── helpers/auth.js               → cria admin/médico direto no banco para os testes
+└── setup/                        → globalSetup (migrations) e afterAll (desconecta o Prisma)
+```
+
+- **Unitários**: usam `jest.mock(...)` para isolar a camada de `services` dos
+  `models` (Prisma nunca é chamado de verdade) — validam regras de negócio
+  como bloqueio de fim de semana, conflito de horário e permissões
+  paciente/admin.
+- **Integração**: usam Supertest para chamar `src/app.js` de ponta a ponta,
+  incluindo o banco de dados real (SQLite de teste), validando o fluxo
+  completo — status HTTP, JSON de resposta, autenticação e regras de negócio
+  juntas.
+
+### Cobertura de código
+
+Última medição local (ver também o artefato `cobertura-backend` publicado
+pelo workflow de CI a cada execução):
+
+| Métrica | Resultado | Mínimo exigido |
+|---|---|---|
+| Statements | 96,26% | 80% |
+| Branches | 75,71% | 70% |
+| Functions | 95,71% | 80% |
+| Lines | 96,22% | 80% |
+
+O limite mínimo está configurado em `jest.config.js` (`coverageThreshold`):
+se a cobertura cair abaixo dele, `npm run test:coverage` (e o CI) falha.
+Depois de rodar `npm run test:coverage`, abra `coverage/index.html` no
+navegador para o relatório visual, arquivo a arquivo.
+
+## CI/CD (GitHub Actions)
+
+Arquivo: [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Roda a cada
+push/PR para `main`, em 3 jobs encadeados:
+
+1. **test** — instala dependências (`npm ci`), gera o Prisma Client, roda
+   `npm run test:coverage` (o próprio Jest quebra o job se a cobertura cair
+   abaixo do limite) e publica a pasta `coverage/` como artefato do workflow.
+2. **build** — reinstala em um runner limpo e executa `npm run build`, que
+   carrega a aplicação inteira (`require('./src/app.js')`) para garantir que
+   não há erro de sintaxe ou de "wiring" entre rotas/middlewares antes de
+   liberar para deploy.
+3. **deploy** (opcional, **desativado por padrão** — `if: false`) — dispara
+   um deploy hook (ex: Render) usando um secret do repositório. Para ativar:
+   configure `RENDER_DEPLOY_HOOK_URL` nos secrets do GitHub e troque a
+   condição do job para `if: github.ref == 'refs/heads/main'`.
